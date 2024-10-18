@@ -1,2 +1,2 @@
 # tetromino_game
-Grade 1 Tetris like game for the purpose of teaching tetrominoes. React.
+Tetris like game for the purpose of teaching tetrominoes for Grade 1. React.
