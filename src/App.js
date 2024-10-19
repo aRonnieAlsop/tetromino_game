@@ -10,6 +10,16 @@ const createStage = () =>
     new Array(STAGE_WIDTH).fill([0, 'clear'])
   );
 
+// Rotate a matrix (tetromino) 90 degrees
+const rotateMatrix = (matrix) => {
+  // Transpose the matrix (rows become columns)
+  const rotatedTetro = matrix.map((_, index) =>
+    matrix.map(col => col[index])
+  );
+  // Reverse the rows to achieve a 90-degree rotation
+  return rotatedTetro.reverse();
+};
+
 // Check for collisions between the tetromino and the stage boundaries or existing blocks
 const checkCollision = (player, stage, { x: moveX, y: moveY }) => {
   for (let y = 0; y < player.tetromino.length; y += 1) {
@@ -17,11 +27,9 @@ const checkCollision = (player, stage, { x: moveX, y: moveY }) => {
       // Check that we're on a tetromino cell
       if (player.tetromino[y][x] !== 0) {
         if (
-          // Check if the move is within the stage height (y)
-          !stage[y + player.pos.y + moveY] || // Check if the piece is out of bounds (bottom)
-          // Check if the move is within the stage width (x)
-          !stage[y + player.pos.y + moveY][x + player.pos.x + moveX] || // Check if it goes out of bounds (side)
-          stage[y + player.pos.y + moveY][x + player.pos.x + moveX][1] !== 'clear' // Check if the block hits another piece
+          !stage[y + player.pos.y + moveY] || // Check if within the stage height (y)
+          !stage[y + player.pos.y + moveY][x + player.pos.x + moveX] || // Check within the stage width (x)
+          stage[y + player.pos.y + moveY][x + player.pos.x + moveX][1] !== 'clear' // Check if cell is already filled
         ) {
           return true;
         }
@@ -38,6 +46,31 @@ const App = () => {
     tetromino: randomTetromino().shape, // Generate a random tetromino
     collided: false, // Flag to track if the tetromino has collided
   });
+
+  // Rotate the tetromino
+  const rotateTetromino = (tetromino) => {
+    const rotatedTetro = rotateMatrix(tetromino); // Rotate the tetromino
+    return rotatedTetro;
+  };
+
+  const rotatePlayer = () => {
+    const rotatedTetromino = rotateTetromino(player.tetromino);
+    const originalPos = player.pos.x;
+    let offset = 1;
+    // Check for collisions before rotating
+    while (checkCollision({ ...player, tetromino: rotatedTetromino }, stage, { x: 0, y: 0 })) {
+      player.pos.x += offset; // Adjust position to avoid collision
+      offset = -(offset + (offset > 0 ? 1 : -1));
+      if (offset > player.tetromino[0].length) {
+        player.pos.x = originalPos; // If no valid rotation is found, revert
+        return;
+      }
+    }
+    setPlayer((prev) => ({
+      ...prev,
+      tetromino: rotatedTetromino, // Apply the rotated tetromino
+    }));
+  };
 
   // Move the player horizontally (left/right)
   const movePlayer = (dir) => {
@@ -88,11 +121,6 @@ const App = () => {
       });
       setStage(newStage);
     }
-  };
-
-  // Rotate the tetromino (this can be improved later)
-  const rotatePlayer = () => {
-    // Implement rotation logic here (optional)
   };
 
   // Handle key presses for movement and rotation
@@ -177,6 +205,7 @@ const App = () => {
 };
 
 export default App;
+
 
 
 
