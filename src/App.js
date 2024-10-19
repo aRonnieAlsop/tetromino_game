@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { randomTetromino } from './Tetromino'; // Import the randomTetromino function
 
@@ -150,8 +149,14 @@ const App = () => {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem', position: 'relative' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STAGE_WIDTH}, 20px)` }}>
+    <div style={{ display: 'flex', 
+                  justifyContent: 'center', 
+                  marginTop: '2rem',
+                  position: 'relative' }}>
+      <div style={{ display: 'grid', 
+                    gridTemplateColumns: `repeat(${STAGE_WIDTH}, 20px)`, 
+                    justifyItems: 'center', 
+                    position: 'relative', }}>
         {stage.map((row, y) =>
           row.map((cell, x) => (
             <div
