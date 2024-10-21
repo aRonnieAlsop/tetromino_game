@@ -12,11 +12,9 @@ const createStage = () =>
 
 // Rotate a matrix (tetromino) 90 degrees
 const rotateMatrix = (matrix) => {
-  // Transpose the matrix (rows become columns)
   const rotatedTetro = matrix.map((_, index) =>
     matrix.map(col => col[index])
   );
-  // Reverse the rows to achieve a 90-degree rotation
   return rotatedTetro.reverse();
 };
 
@@ -24,7 +22,6 @@ const rotateMatrix = (matrix) => {
 const checkCollision = (player, stage, { x: moveX, y: moveY }) => {
   for (let y = 0; y < player.tetromino.length; y += 1) {
     for (let x = 0; x < player.tetromino[y].length; x += 1) {
-      // Check that we're on a tetromino cell
       if (player.tetromino[y][x] !== 0) {
         if (
           !stage[y + player.pos.y + moveY] || // Check if within the stage height (y)
@@ -39,6 +36,21 @@ const checkCollision = (player, stage, { x: moveX, y: moveY }) => {
   return false;
 };
 
+// Check if the game is over by looking at the top row where the new tetromino spawns
+const checkGameOver = (newPlayer, stage) => {
+  for (let y = 0; y < newPlayer.tetromino.length; y++) {
+    for (let x = 0; x < newPlayer.tetromino[y].length; x++) {
+      if (
+        newPlayer.tetromino[y][x] !== 0 &&
+        stage[y + newPlayer.pos.y][x + newPlayer.pos.x][1] !== 'clear'
+      ) {
+        return true; // Game over if the spawn position is blocked
+      }
+    }
+  }
+  return false;
+};
+
 const App = () => {
   const [stage, setStage] = useState(createStage());
   const [player, setPlayer] = useState({
@@ -46,6 +58,7 @@ const App = () => {
     tetromino: randomTetromino().shape, // Generate a random tetromino
     collided: false, // Flag to track if the tetromino has collided
   });
+  const [gameOver, setGameOver] = useState(false); //track game over state
 
   // Rotate the tetromino
   const rotateTetromino = (tetromino) => {
@@ -90,7 +103,6 @@ const App = () => {
         pos: { x: prev.pos.x, y: prev.pos.y + 1 },
       }));
     } else {
-      // If there's a collision, place the tetromino on the stage
       setPlayer((prev) => ({
         ...prev,
         collided: true,
@@ -113,44 +125,54 @@ const App = () => {
         });
       });
 
-      // Reset the player with a new tetromino after collision
-      setPlayer({
+      // Check for game over before spawning a new tetromino
+      const newPlayer = {
         pos: { x: STAGE_WIDTH / 2 - 2, y: 0 },
         tetromino: randomTetromino().shape,
         collided: false,
-      });
-      setStage(newStage);
+      };
+
+      if (checkGameOver(newPlayer, newStage)) {
+        setGameOver(true); // Trigger game over if no space for the new tetromino
+      } else {
+        setPlayer(newPlayer);
+        setStage(newStage);
+      }
     }
   };
 
   // Handle key presses for movement and rotation
   const move = useCallback(
     ({ keyCode }) => {
-      if (keyCode === 37) {
-        movePlayer(-1); // Move left
-      } else if (keyCode === 39) {
-        movePlayer(1); // Move right
-      } else if (keyCode === 40) {
-        dropPlayer(); // Move down
-      } else if (keyCode === 38) {
-        rotatePlayer(); // Rotate
+      if (!gameOver) {
+        if (keyCode === 37) {
+          movePlayer(-1); // Move left
+        } else if (keyCode === 39) {
+          movePlayer(1); // Move right
+        } else if (keyCode === 40) {
+          dropPlayer(); // Move down
+        } else if (keyCode === 38) {
+          rotatePlayer(); // Rotate
+        }
       }
     },
-    [movePlayer, dropPlayer, rotatePlayer] // Add these to dependency array
+    [movePlayer, dropPlayer, rotatePlayer, gameOver]
   );
 
   // Game loop: drops the player every second
   useEffect(() => {
-    const gameLoop = setInterval(() => {
-      drop();
-    }, 1000);
+    if (!gameOver) {
+      const gameLoop = setInterval(() => {
+        drop();
+      }, 1000);
 
-    window.addEventListener('keydown', move);
-    return () => {
-      window.removeEventListener('keydown', move);
-      clearInterval(gameLoop);
-    };
-  }, [move, drop]); // Add `move` and `drop` to dependency array
+      window.addEventListener('keydown', move);
+      return () => {
+        window.removeEventListener('keydown', move);
+        clearInterval(gameLoop);
+      };
+    }
+  }, [move, drop, gameOver]);
 
   // Render the player's tetromino on the grid
   const renderTetromino = () => {
@@ -177,34 +199,33 @@ const App = () => {
   };
 
   return (
-    <div style={{ display: 'flex', 
-                  justifyContent: 'center', 
-                  marginTop: '2rem',
-                  position: 'relative' }}>
-      <div style={{ display: 'grid', 
-                    gridTemplateColumns: `repeat(${STAGE_WIDTH}, 20px)`, 
-                    justifyItems: 'center', 
-                    position: 'relative', }}>
-        {stage.map((row, y) =>
-          row.map((cell, x) => (
-            <div
-              key={x}
-              style={{
-                width: 20,
-                height: 20,
-                border: '1px solid black',
-                backgroundColor: cell[1] === 'clear' ? 'white' : 'grey',
-              }}
-            />
-          ))
-        )}
-        {renderTetromino()} {/* Render the player's tetromino */}
-      </div>
+    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem', position: 'relative' }}>
+      {gameOver ? (
+        <div style={{ color: 'red', fontSize: '2rem' }}>Game Over</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STAGE_WIDTH}, 20px)`, justifyItems: 'center', position: 'relative', }}>
+          {stage.map((row, y) =>
+            row.map((cell, x) => (
+              <div
+                key={x}
+                style={{
+                  width: 20,
+                  height: 20,
+                  border: '1px solid black',
+                  backgroundColor: cell[1] === 'clear' ? 'white' : 'grey',
+                }}
+              />
+            ))
+          )}
+          {renderTetromino()} {/* Render the player's tetromino */}
+        </div>
+      )}
     </div>
   );
 };
 
 export default App;
+
 
 
 
